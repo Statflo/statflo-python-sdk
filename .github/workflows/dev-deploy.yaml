@@ -3,10 +3,99 @@ on:
   workflow_dispatch:
     inputs:
       run_id:
+        description: "Optional Run ID for specific artifact. Leave blank to use from the latest webapp deployment."
         required: false
         type: string
+
+env:
+  PACKAGE_NAME: statflo_python_sdk
+  PROJECT_NAME: statflo-python-sdk
+
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - run: echo stub
+      - name: Generate unique branch name
+        run: |
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          BRANCH_NAME="dev_${TIMESTAMP}"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "RELEASE_VERSION=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "PY_VERSION=0.0.0.dev${TIMESTAMP}" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create and checkout unique branch
+        run: |
+          git checkout -b ${{ env.BRANCH_NAME }}
+
+      - name: Download the swagger spec
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          repo: ${{ secrets.REPO }}
+          github_token: ${{ secrets.ARTIFACT_READ_ONLY }}
+          run_id: ${{ github.event.inputs.run_id || '' }}
+          workflow: statflo-webapp-deploy.yaml
+          name: webapp-artifact
+          path: ./webapp-artifact/
+          workflow_conclusion: success
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate code from Swagger file
+        run: |
+          # Delete the generated client first so models/APIs removed from the spec do not linger
+          rm -rf "./${{ env.PACKAGE_NAME }}" ./docs
+          npx --yes @openapitools/openapi-generator-cli@2.42.2 generate \
+            -i ./webapp-artifact/nelmio-spec.json \
+            -g python \
+            -o . \
+            -t ./openapi-templates \
+            --git-user-id Statflo \
+            --git-repo-id ${{ env.PROJECT_NAME }} \
+            --additional-properties=packageName=${{ env.PACKAGE_NAME }},projectName=${{ env.PROJECT_NAME }},packageVersion=${{ env.PY_VERSION }},releaseVersion=${{ env.RELEASE_VERSION }} \
+            --skip-validate-spec
+
+      - name: Build
+        run: |
+          python -m pip install .
+          python -c "import ${{ env.PACKAGE_NAME }}; print(${{ env.PACKAGE_NAME }}.__version__)"
+
+      - name: Commit and Push to unique branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Generate SDK for Dev (version: ${{ env.RELEASE_VERSION }})"
+          git push origin ${{ env.BRANCH_NAME }}
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          cat <<SUMMARY >> $GITHUB_STEP_SUMMARY
+          ## 🚀 Deployment Summary
+
+          | Property | Value |
+          |----------|--------|
+          | Branch | ${{ env.BRANCH_NAME }} |
+
+          ### 📦 pip Dependency
+
+          \`\`\`text
+          ${{ env.PROJECT_NAME }} @ git+https://github.com/Statflo/${{ env.PROJECT_NAME }}.git@${{ env.BRANCH_NAME }}
+          \`\`\`
+          SUMMARY
