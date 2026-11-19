@@ -156,8 +156,7 @@ class {{classname}}({{#parent}}{{{.}}}{{/parent}}{{^parent}}BaseModel{{/parent}}
         * Fields in `self.additional_properties` are added to the output dict.
         {{/isAdditionalPropertiesTrue}}
         """
-        _skip_filled = self._unchanged_filled_fields()
-        excluded_fields: Set[str] = _skip_filled | set([
+        excluded_fields: Set[str] = set([
             {{#vendorExtensions.x-py-readonly}}
             "{{{.}}}",
             {{/vendorExtensions.x-py-readonly}}
@@ -170,6 +169,7 @@ class {{classname}}({{#parent}}{{{.}}}{{/parent}}{{^parent}}BaseModel{{/parent}}
             by_alias=True,
             exclude=excluded_fields,
             exclude_none=True,
+            exclude_unset=True,
         )
         {{#allVars}}
         {{#isContainer}}
@@ -234,7 +234,7 @@ class {{classname}}({{#parent}}{{{.}}}{{/parent}}{{^parent}}BaseModel{{/parent}}
         {{^isPrimitiveType}}
         {{^isEnumOrRef}}
         # override the default output from pydantic by calling `to_dict()` of {{{name}}}
-        if self.{{{name}}} and "{{{name}}}" not in _skip_filled:
+        if self.{{{name}}}:
             _dict['{{{baseName}}}'] = self.{{{name}}}.to_dict()
         {{/isEnumOrRef}}
         {{/isPrimitiveType}}
@@ -256,6 +256,7 @@ class {{classname}}({{#parent}}{{{.}}}{{/parent}}{{^parent}}BaseModel{{/parent}}
 
         {{/isNullable}}
         {{/allVars}}
+        _dict.update(self._explicit_null_fields())
         return _dict
 
     {{#hasChildren}}
@@ -390,6 +391,7 @@ class {{classname}}({{#parent}}{{{.}}}{{/parent}}{{^parent}}BaseModel{{/parent}}
             {{/isContainer}}
             {{/allVars}}
         })
+        _obj.__pydantic_fields_set__ &= {_n for _n, _f in cls.model_fields.items() if (_f.alias or _n) in obj}
         {{#isAdditionalPropertiesTrue}}
         # store additional fields in additional_properties
         for _key in obj.keys():

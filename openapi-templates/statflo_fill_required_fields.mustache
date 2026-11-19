@@ -1,4 +1,48 @@
     _filled_fields: Set[str] = PrivateAttr(default_factory=set)
+    __lenient_models: ClassVar[Dict[Any, Any]] = {}
+
+    @classmethod
+    def __missing_required_fields(cls, data: Dict[str, Any]) -> Any:
+        """Required fields that are missing (or null) in the input."""
+        _missing = set()
+        for _field_name, _field_info in cls.model_fields.items():
+            if not _field_info.is_required():
+                continue
+            _key = _field_info.alias or _field_name
+            # also accept the python field name (e.g. Model(field_name=...)), not just the alias
+            if type(None) in getattr(_field_info.annotation, "__args__", ()):
+                # nullable field: an explicit null is a real value, only a missing key counts
+                if _key not in data and _field_name not in data:
+                    _missing.add(_field_name)
+            elif data.get(_key) is None and data.get(_field_name) is None:
+                _missing.add(_field_name)
+        return frozenset(_missing)
+
+    @classmethod
+    def __build_with_missing_fields(cls, data: Dict[str, Any], missing: Any) -> Any:
+        """Validate the input without the missing fields, which are set to None."""
+        from pydantic import create_model
+        # a cached variant of this model where only the missing fields are optional (default None,
+        # never validated), so their type, length, regex and enum checks are skipped
+        _lenient = cls.__lenient_models.get((cls, missing))
+        if _lenient is None:
+            _lenient = create_model(
+                cls.__name__,
+                __base__=cls,
+                **{_name: (Optional[Any], Field(default=None, alias=cls.model_fields[_name].alias)) for _name in missing},
+            )
+            cls.__lenient_models[(cls, missing)] = _lenient
+        _skip = set(missing) | {cls.model_fields[_name].alias for _name in missing}
+        _validated = _lenient.model_validate({_k: _v for _k, _v in data.items() if _k not in _skip})
+        # a field explicitly given as None counts as set (sent as null, the backend validates it);
+        # a field left out does not (never sent)
+        _explicit = {_name for _name in missing if _name in data or cls.model_fields[_name].alias in data}
+        _obj = cls.model_construct(
+            _fields_set=(_validated.model_fields_set - set(missing)) | _explicit,
+            **{_name: getattr(_validated, _name) for _name in cls.model_fields},
+        )
+        _obj._filled_fields = set(missing)
+        return _obj
 
     @model_validator(mode="wrap")
     @classmethod
@@ -7,83 +51,51 @@
 
         Some upstream API responses omit, or send `null` for, fields the
         schema marks required. Rather than failing validation outright,
-        each such field passes validation with a temporary value and is
-        then set to None, so no made-up data is exposed.
-        Filled fields are remembered and excluded from to_dict()/to_json().
+        such fields are set to None (they are not validated), so no made-up
+        data is exposed. Filled fields are remembered and excluded from
+        to_dict()/to_json().
         """
         if not isinstance(data, dict):
             return handler(data)
+        _missing = cls.__missing_required_fields(data)
+        if not _missing:
+            return handler(data)
+        return cls.__build_with_missing_fields(data, _missing)
 
-        def _temp_value(tp: Any) -> Any:
-            # any value that passes validation for the type; it is replaced by None afterwards
-            if hasattr(tp, "__metadata__"):  # Annotated[X, ...] -> X
-                tp = tp.__origin__
-            _origin = get_origin(tp) or tp
-            if _origin is list:
-                return []
-            if _origin is dict or _origin is Any:
-                return {}
-            if _origin is set:
-                return set()
-            if _origin is str:
-                return ""
-            if _origin is bool:
-                return False
-            if _origin is int:
-                return 0
-            if _origin is float:
-                return 0.0
-            if isinstance(_origin, type) and hasattr(_origin, "__members__"):  # enum class
-                return next(iter(_origin))
-            if isinstance(_origin, type) and hasattr(_origin, "min") and hasattr(_origin, "fromisoformat"):
-                return _origin.min  # datetime.date / datetime.datetime / datetime.time
-            if isinstance(_origin, type) and issubclass(_origin, BaseModel):
-                return _origin.model_construct()
-            for _arg in getattr(tp, "__args__", ()):  # Union[...]: use the first member that works
-                _value = _temp_value(_arg)
-                if _value is not _temp_value:
-                    return _value
-            return _temp_value  # sentinel: no temporary value for this type
-
-        # inline enums are plain str/int fields with an allowed-values check, so use an allowed value
-        _inline_enums: Dict[str, Any] = { {{#allVars}}{{#isEnum}}"{{{name}}}": {{#isArray}}[]{{/isArray}}{{^isArray}}{{#allowableValues}}{{#enumVars}}{{#-first}}{{{value}}}{{/-first}}{{/enumVars}}{{/allowableValues}}{{/isArray}}, {{/isEnum}}{{/allVars}} }
-        data = dict(data)
-        _filled: Set[str] = set()
-        for _field_name, _field_info in cls.model_fields.items():
-            if not _field_info.is_required():
-                continue
-            _key = _field_info.alias or _field_name
-            # also accept the python field name (e.g. Model(field_name=...)), not just the alias
-            if data.get(_key) is not None or data.get(_field_name) is not None:
-                continue
-            if type(None) in getattr(_field_info.annotation, "__args__", ()):
-                # nullable field: an explicit null is a real value, only a missing key is filled
-                if _key in data or _field_name in data:
-                    continue
-                _value = None
-            elif _field_name in _inline_enums:
-                _value = _inline_enums[_field_name]
-            else:
-                _value = _temp_value(_field_info.annotation)
-                if _value is _temp_value:
-                    continue
-            data.pop(_field_name, None)
-            data[_key] = _value
-            _filled.add(_field_name)
-        _obj = handler(data)
-        for _field_name in _filled:
-            _obj.__dict__[_field_name] = None
-            _obj.__pydantic_fields_set__.discard(_field_name)  # not provided, so not "set"
-        _obj._filled_fields = _filled
-        return _obj
+    def __init__(self, **data: Any) -> None:
+        # Model(...) cannot swap in another object from a validator, so handle missing fields here
+        _missing = type(self).__missing_required_fields(data)
+        if not _missing:
+            super().__init__(**data)
+            return
+        _built = type(self).__build_with_missing_fields(data, _missing)
+        for _attr in ("__dict__", "__pydantic_fields_set__", "__pydantic_extra__", "__pydantic_private__"):
+            object.__setattr__(self, _attr, getattr(_built, _attr))
 
     def __setattr__(self, name: str, value: Any) -> None:
+        _field_info = type(self).model_fields.get(name)
+        if (
+            value is None
+            and _field_info is not None
+            and _field_info.is_required()
+            and type(None) not in getattr(_field_info.annotation, "__args__", ())
+        ):
+            # explicit None for a required field: keep it unvalidated, it is sent as null
+            self.__dict__[name] = None
+            self.__pydantic_fields_set__.add(name)
+            self._filled_fields.add(name)
+            return
         super().__setattr__(name, value)
         # an explicit assignment makes the field a real value again
         _filled = getattr(self, "_filled_fields", None)
         if _filled and name in _filled:
             _filled.discard(name)
 
-    def _unchanged_filled_fields(self) -> Set[str]:
-        """Auto-filled required fields that are still None (never assigned since)."""
-        return {_name for _name in (getattr(self, "_filled_fields", None) or set()) if getattr(self, _name, None) is None}
+    def _explicit_null_fields(self) -> Dict[str, None]:
+        """Required fields explicitly set to None, sent as null so the backend can validate them."""
+        _fields = type(self).model_fields
+        return {
+            (_fields[_name].alias or _name): None
+            for _name in (getattr(self, "_filled_fields", None) or set())
+            if _name in self.model_fields_set and getattr(self, _name, None) is None
+        }
