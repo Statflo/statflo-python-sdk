@@ -1,0 +1,89 @@
+    _filled_fields: Set[str] = PrivateAttr(default_factory=set)
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def __fill_null_required_fields(cls, data: Any, handler: Any) -> Any:
+        """Treat a missing or null value for a required field as None.
+
+        Some upstream API responses omit, or send `null` for, fields the
+        schema marks required. Rather than failing validation outright,
+        each such field passes validation with a temporary value and is
+        then set to None, so no made-up data is exposed.
+        Filled fields are remembered and excluded from to_dict()/to_json().
+        """
+        if not isinstance(data, dict):
+            return handler(data)
+
+        def _temp_value(tp: Any) -> Any:
+            # any value that passes validation for the type; it is replaced by None afterwards
+            if hasattr(tp, "__metadata__"):  # Annotated[X, ...] -> X
+                tp = tp.__origin__
+            _origin = get_origin(tp) or tp
+            if _origin is list:
+                return []
+            if _origin is dict or _origin is Any:
+                return {}
+            if _origin is set:
+                return set()
+            if _origin is str:
+                return ""
+            if _origin is bool:
+                return False
+            if _origin is int:
+                return 0
+            if _origin is float:
+                return 0.0
+            if isinstance(_origin, type) and hasattr(_origin, "__members__"):  # enum class
+                return next(iter(_origin))
+            if isinstance(_origin, type) and hasattr(_origin, "min") and hasattr(_origin, "fromisoformat"):
+                return _origin.min  # datetime.date / datetime.datetime / datetime.time
+            if isinstance(_origin, type) and issubclass(_origin, BaseModel):
+                return _origin.model_construct()
+            for _arg in getattr(tp, "__args__", ()):  # Union[...]: use the first member that works
+                _value = _temp_value(_arg)
+                if _value is not _temp_value:
+                    return _value
+            return _temp_value  # sentinel: no temporary value for this type
+
+        # inline enums are plain str/int fields with an allowed-values check, so use an allowed value
+        _inline_enums: Dict[str, Any] = { {{#allVars}}{{#isEnum}}"{{{name}}}": {{#isArray}}[]{{/isArray}}{{^isArray}}{{#allowableValues}}{{#enumVars}}{{#-first}}{{{value}}}{{/-first}}{{/enumVars}}{{/allowableValues}}{{/isArray}}, {{/isEnum}}{{/allVars}} }
+        data = dict(data)
+        _filled: Set[str] = set()
+        for _field_name, _field_info in cls.model_fields.items():
+            if not _field_info.is_required():
+                continue
+            _key = _field_info.alias or _field_name
+            # also accept the python field name (e.g. Model(field_name=...)), not just the alias
+            if data.get(_key) is not None or data.get(_field_name) is not None:
+                continue
+            if type(None) in getattr(_field_info.annotation, "__args__", ()):
+                # nullable field: an explicit null is a real value, only a missing key is filled
+                if _key in data or _field_name in data:
+                    continue
+                _value = None
+            elif _field_name in _inline_enums:
+                _value = _inline_enums[_field_name]
+            else:
+                _value = _temp_value(_field_info.annotation)
+                if _value is _temp_value:
+                    continue
+            data.pop(_field_name, None)
+            data[_key] = _value
+            _filled.add(_field_name)
+        _obj = handler(data)
+        for _field_name in _filled:
+            _obj.__dict__[_field_name] = None
+            _obj.__pydantic_fields_set__.discard(_field_name)  # not provided, so not "set"
+        _obj._filled_fields = _filled
+        return _obj
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        super().__setattr__(name, value)
+        # an explicit assignment makes the field a real value again
+        _filled = getattr(self, "_filled_fields", None)
+        if _filled and name in _filled:
+            _filled.discard(name)
+
+    def _unchanged_filled_fields(self) -> Set[str]:
+        """Auto-filled required fields that are still None (never assigned since)."""
+        return {_name for _name in (getattr(self, "_filled_fields", None) or set()) if getattr(self, _name, None) is None}
