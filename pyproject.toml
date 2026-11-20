@@ -1,6 +1,6 @@
 [project]
 name = "statflo_python_sdk"
-version = "0.0.0.dev0"
+version = "4.1.223"
 description = "Statflo API"
 authors = [
   {name = "OpenAPI Generator Community",email = "team@openapitools.org"},

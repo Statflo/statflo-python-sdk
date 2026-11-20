@@ -1,0 +1,402 @@
+# statflo_python_sdk.RcsAgentMetadataApi
+
+All URIs are relative to *https://app.statflo.com*
+
+Method | HTTP request | Description
+------------- | ------------- | -------------
+[**rcs_agent_metadata_create**](RcsAgentMetadataApi.md#rcs_agent_metadata_create) | **POST** /v4/api/rcs-agent-metadata | 
+[**rcs_agent_metadata_delete**](RcsAgentMetadataApi.md#rcs_agent_metadata_delete) | **DELETE** /v4/api/rcs-agent-metadata/{id} | 
+[**rcs_agent_metadata_get**](RcsAgentMetadataApi.md#rcs_agent_metadata_get) | **GET** /v4/api/rcs-agent-metadata/{id} | 
+[**rcs_agent_metadata_search**](RcsAgentMetadataApi.md#rcs_agent_metadata_search) | **GET** /v4/api/rcs-agent-metadata | 
+[**rcs_agent_metadata_update**](RcsAgentMetadataApi.md#rcs_agent_metadata_update) | **PUT** /v4/api/rcs-agent-metadata/{id} | 
+
+
+# **rcs_agent_metadata_create**
+> RcsAgentMetadata rcs_agent_metadata_create(rcs_agent_metadata_create=rcs_agent_metadata_create)
+
+Create an rcs agent metadata.
+
+### Example
+
+* Bearer (JWT) Authentication (Bearer):
+
+```python
+import statflo_python_sdk
+from statflo_python_sdk.models.rcs_agent_metadata import RcsAgentMetadata
+from statflo_python_sdk.models.rcs_agent_metadata_create import RcsAgentMetadataCreate
+from statflo_python_sdk.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to https://app.statflo.com
+# See configuration.py for a list of all supported configuration parameters.
+configuration = statflo_python_sdk.Configuration(
+    host = "https://app.statflo.com"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure Bearer authorization (JWT): Bearer
+configuration = statflo_python_sdk.Configuration(
+    access_token = os.environ["BEARER_TOKEN"]
+)
+
+# Enter a context with an instance of the API client
+with statflo_python_sdk.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = statflo_python_sdk.RcsAgentMetadataApi(api_client)
+    rcs_agent_metadata_create = statflo_python_sdk.RcsAgentMetadataCreate() # RcsAgentMetadataCreate |  (optional)
+
+    try:
+        api_response = api_instance.rcs_agent_metadata_create(rcs_agent_metadata_create=rcs_agent_metadata_create)
+        print("The response of RcsAgentMetadataApi->rcs_agent_metadata_create:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling RcsAgentMetadataApi->rcs_agent_metadata_create: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **rcs_agent_metadata_create** | [**RcsAgentMetadataCreate**](RcsAgentMetadataCreate.md)|  | [optional] 
+
+### Return type
+
+[**RcsAgentMetadata**](RcsAgentMetadata.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Success |  -  |
+**400** | Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **rcs_agent_metadata_delete**
+> rcs_agent_metadata_delete(id)
+
+Remove an rcs agent metadata.
+
+### Example
+
+* Bearer (JWT) Authentication (Bearer):
+
+```python
+import statflo_python_sdk
+from statflo_python_sdk.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to https://app.statflo.com
+# See configuration.py for a list of all supported configuration parameters.
+configuration = statflo_python_sdk.Configuration(
+    host = "https://app.statflo.com"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure Bearer authorization (JWT): Bearer
+configuration = statflo_python_sdk.Configuration(
+    access_token = os.environ["BEARER_TOKEN"]
+)
+
+# Enter a context with an instance of the API client
+with statflo_python_sdk.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = statflo_python_sdk.RcsAgentMetadataApi(api_client)
+    id = 'id_example' # str | 
+
+    try:
+        api_instance.rcs_agent_metadata_delete(id)
+    except Exception as e:
+        print("Exception when calling RcsAgentMetadataApi->rcs_agent_metadata_delete: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **str**|  | 
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**204** | Success |  -  |
+**400** | Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **rcs_agent_metadata_get**
+> RcsAgentMetadata rcs_agent_metadata_get(id)
+
+Retrieve an rcs agent metadata.
+
+### Example
+
+* Bearer (JWT) Authentication (Bearer):
+
+```python
+import statflo_python_sdk
+from statflo_python_sdk.models.rcs_agent_metadata import RcsAgentMetadata
+from statflo_python_sdk.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to https://app.statflo.com
+# See configuration.py for a list of all supported configuration parameters.
+configuration = statflo_python_sdk.Configuration(
+    host = "https://app.statflo.com"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure Bearer authorization (JWT): Bearer
+configuration = statflo_python_sdk.Configuration(
+    access_token = os.environ["BEARER_TOKEN"]
+)
+
+# Enter a context with an instance of the API client
+with statflo_python_sdk.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = statflo_python_sdk.RcsAgentMetadataApi(api_client)
+    id = 'id_example' # str | 
+
+    try:
+        api_response = api_instance.rcs_agent_metadata_get(id)
+        print("The response of RcsAgentMetadataApi->rcs_agent_metadata_get:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling RcsAgentMetadataApi->rcs_agent_metadata_get: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **str**|  | 
+
+### Return type
+
+[**RcsAgentMetadata**](RcsAgentMetadata.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Success |  -  |
+**400** | Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **rcs_agent_metadata_search**
+> RcsAgentMetadataPaginationResponse rcs_agent_metadata_search(filter=filter, query=query, page=page, per_page=per_page, sort=sort)
+
+Search rcs agent metadata.
+
+### Example
+
+* Bearer (JWT) Authentication (Bearer):
+
+```python
+import statflo_python_sdk
+from statflo_python_sdk.models.rcs_agent_metadata_pagination_response import RcsAgentMetadataPaginationResponse
+from statflo_python_sdk.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to https://app.statflo.com
+# See configuration.py for a list of all supported configuration parameters.
+configuration = statflo_python_sdk.Configuration(
+    host = "https://app.statflo.com"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure Bearer authorization (JWT): Bearer
+configuration = statflo_python_sdk.Configuration(
+    access_token = os.environ["BEARER_TOKEN"]
+)
+
+# Enter a context with an instance of the API client
+with statflo_python_sdk.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = statflo_python_sdk.RcsAgentMetadataApi(api_client)
+    filter = None # Dict[str, object] |  (optional)
+    query = 'query_example' # str |  (optional)
+    page = 56 # int |  (optional)
+    per_page = 56 # int |  (optional)
+    sort = 'sort_example' # str |  (optional)
+
+    try:
+        api_response = api_instance.rcs_agent_metadata_search(filter=filter, query=query, page=page, per_page=per_page, sort=sort)
+        print("The response of RcsAgentMetadataApi->rcs_agent_metadata_search:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling RcsAgentMetadataApi->rcs_agent_metadata_search: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **filter** | [**Dict[str, object]**](object.md)|  | [optional] 
+ **query** | **str**|  | [optional] 
+ **page** | **int**|  | [optional] 
+ **per_page** | **int**|  | [optional] 
+ **sort** | **str**|  | [optional] 
+
+### Return type
+
+[**RcsAgentMetadataPaginationResponse**](RcsAgentMetadataPaginationResponse.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Success |  -  |
+**400** | Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **rcs_agent_metadata_update**
+> RcsAgentMetadata rcs_agent_metadata_update(id, rcs_agent_metadata_update=rcs_agent_metadata_update)
+
+Update an rcs agent metadata.
+
+### Example
+
+* Bearer (JWT) Authentication (Bearer):
+
+```python
+import statflo_python_sdk
+from statflo_python_sdk.models.rcs_agent_metadata import RcsAgentMetadata
+from statflo_python_sdk.models.rcs_agent_metadata_update import RcsAgentMetadataUpdate
+from statflo_python_sdk.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to https://app.statflo.com
+# See configuration.py for a list of all supported configuration parameters.
+configuration = statflo_python_sdk.Configuration(
+    host = "https://app.statflo.com"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure Bearer authorization (JWT): Bearer
+configuration = statflo_python_sdk.Configuration(
+    access_token = os.environ["BEARER_TOKEN"]
+)
+
+# Enter a context with an instance of the API client
+with statflo_python_sdk.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = statflo_python_sdk.RcsAgentMetadataApi(api_client)
+    id = 'id_example' # str | 
+    rcs_agent_metadata_update = statflo_python_sdk.RcsAgentMetadataUpdate() # RcsAgentMetadataUpdate |  (optional)
+
+    try:
+        api_response = api_instance.rcs_agent_metadata_update(id, rcs_agent_metadata_update=rcs_agent_metadata_update)
+        print("The response of RcsAgentMetadataApi->rcs_agent_metadata_update:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling RcsAgentMetadataApi->rcs_agent_metadata_update: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **id** | **str**|  | 
+ **rcs_agent_metadata_update** | [**RcsAgentMetadataUpdate**](RcsAgentMetadataUpdate.md)|  | [optional] 
+
+### Return type
+
+[**RcsAgentMetadata**](RcsAgentMetadata.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Success |  -  |
+**400** | Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
